@@ -2,7 +2,7 @@
 
 Erlang C Node to run Lua scripts
 
-This library provides code to run Lua code from within Erlang. It
+This library provides a way to run Lua code from within Erlang. It
 differs from the other Lua - Erlang integrations available, in that it runs
 the Lua VM as an external Node (using Erlang's Port and C Node
 capabilities).
