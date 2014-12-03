@@ -85,4 +85,70 @@ The Lua VM is stopped using
 ok
 ```
 
+### Value translation from  to Erlang
 
+```
+	nil -> 'nil' Atom
+
+	true -> 'true' Atom
+	false -> 'false' Atom
+
+	erl_atom"string" -> 'string' Atom
+
+	integer number -> Integer Number
+	floating point number -> Float Number
+
+	"string" -> Binary
+
+	erl_string"string" -> "string" String
+
+	erl_tuple{ V1, V2, V3, ..., Vn } -> { V1, V2, V3, ..., Vn }
+
+	{ V1, V2, V3, ..., Vn } -> [ V1, V2, V3, ..., Vn ]
+
+	{ K1=V1, K2=V2, K3=V3, ..., Kn=Vn } -> [ {K1, V1}, {K2, V2}, {K3, V3}, ..., {Kn, Vn} ]
+		/ Order of pairs not guaranteed,
+		/ If type(K) == "string" and #K < 256 then Erlang K is Atom
+
+	{ V1, V2, ..., Vn, Kn+1=Vn+1, Kn+2=Vn+2, ..., Kn+k=Vn+k  }
+			-> [ V1, V2, ..., Vn, {Kn+1, Vn+1}, {Kn+1, Vn+2}, ..., {Kn+1, Vn+n} ]
+		/ Order of {K, V} pairs not guaranteed
+		/ If type(K) == "string" and #K < 256 then Erlang K is Atom
+
+	Unusable types:
+		function -> 'function' Atom
+		userdata -> 'userdata' Atom
+		thread -> 'thread' Atom
+		lightuserdata -> 'lightuserdata' Atom
+```
+
+
+### Value translation from Erlang to Lua
+
+```
+	'nil' Atom -> nil
+	'true' Atom -> true
+	'false' Atom -> false
+
+	Atom -> string
+
+	Integer Number -> number
+	Float Number -> number
+
+	Binary -> string
+	/ Note: Regular Erlang Strings are Lists: "abc" -> { 97, 98, 99 }
+
+	{ V1, V2, V3, ..., Vn } -> { V1, V2, V3, ..., Vn }
+	[ V1, V2, V3, ..., Vn ] -> { V1, V2, V3, ..., Vn }
+
+	[ {K1, V1}, {K2, V2}, {K3, V3}, ..., {Kn, Vn} ] -> { K1=V1, K2=V2, K3=V3, ..., Kn=Vn }
+		/ If all Erlang K are Atoms
+
+	[ V1, {K2, V2}, V3, {K4, V4}, V5, ..., Vn, {Kn+1, Vn+1}, ... ] -> { V1, V3, V4, ..., Vn, K2=V2, K4=V4, ..., Kn+1=Vn+1 }
+		/ If Erlang K is Atom
+		/ Note: All elements that are not a 2-tuple with the first element an Atom, become array elements in Lua
+		/      Only the ordering of non 2-tuples is preserved! 
+
+	Unusable types:
+		Reference, Fun, Port, Pid -> nil
+```
