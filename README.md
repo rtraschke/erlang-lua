@@ -2,6 +2,11 @@
 
 Erlang C Node to run Lua scripts
 
+This library provides code to run Lua code from within Erlang. It
+differs from the other Lua - Erlang integrations available, in that it runs
+the Lua VM as an external Node (using Erlang's Port and C Node
+capabilities).
+
 It's early days in making this available to the public, so be aware
 that some assembly is required.
 
@@ -41,17 +46,12 @@ standard output and, if all is good, ends with `All 87 tests passed.`
 A `make clean` does the obvious.
 
 
-## What It Is
-
-This library provides code to run Lua code from within Erlang. It
-differs from the other Lua - Erlang integrations available, in that it runs
-the Lua VM as an external Node (using Erlang's Port and C Node
-capabilities).
+## What It Can Do
 
 Starting a Lua VM through
 ```erlang
 (rtr@127.0.0.1)1> erlang_lua:start_link(foo).
-{ok,<0.47.0>}
+{ok,<0.40.0>}
 ```
 brings up a `gen_server` that provides the interface to running and
 monitoring the Lua VM. It starts a C program to run the Lua VM via
@@ -79,13 +79,30 @@ available via the `call` interface:
 {lua,[3,5,<<"o">>,<<"a">>]}
 ```
 
+It is also possible to call back into Erlang from Lua:
+```erlang
+(rtr@127.0.0.1)6> erlang_lua:lua(foo, <<"return erl_rpc('date')">>).
+{lua,[[2014,12,3]]}
+(rtr@127.0.0.1)7> erlang_lua:lua(foo, <<"return erl_rpc('erlang', 'date')">>).
+{lua,[[2014,12,3]]}
+(rtr@127.0.0.1)8> erlang_lua:lua(foo, <<"return erl_rpc('lists', 'seq', 2, 15, 3)">>).
+{lua,[[2,5,8,11,14]]}
+(rtr@127.0.0.1)9> S = <<"foobar">>.
+<<"foobar">>
+(rtr@127.0.0.1)10> {lua, [ R ]} = erlang_lua:call(foo, erl_rpc, [base64, encode, S]).
+{lua,[<<"Zm9vYmFy">>]}
+(rtr@127.0.0.1)11> {lua, [ S ]} = erlang_lua:call(foo, erl_rpc, [base64, decode, R]).
+{lua,[<<"foobar">>]}
+```
+
 The Lua VM is stopped using
 ```erlang
-(rtr@127.0.0.1)6> erlang_lua:stop(foo).
+(rtr@127.0.0.1)12> erlang_lua:stop(foo).
 ok
 ```
 
-### Value translation from  to Erlang
+
+### Value Translation From Lua To Erlang
 
 ```
 	nil -> 'nil' Atom
@@ -123,7 +140,7 @@ ok
 ```
 
 
-### Value translation from Erlang to Lua
+### Value Translation From Erlang To Lua
 
 ```
 	'nil' Atom -> nil
