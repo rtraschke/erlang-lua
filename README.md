@@ -73,15 +73,15 @@ are converted to Erlang terms.
 Some support for automatically translating Erlang values to Lua is
 available via the `call` interface:
 ```erlang
-(rtr@127.0.0.1)2> erlang_lua:lua(foo, <<"find = string.find">>).
+(rtr@127.0.0.1)4> erlang_lua:lua(foo, <<"find = string.find">>).
 {lua,ok}
-(rtr@127.0.0.1)2> erlang_lua:call(foo, find, [<<"foobar">>, <<"(o)b(a)">>]).
+(rtr@127.0.0.1)5> erlang_lua:call(foo, find, [<<"foobar">>, <<"(o)b(a)">>]).
 {lua,[3,5,<<"o">>,<<"a">>]}
 ```
 
 The Lua VM is stopped using
 ```erlang
-(rtr@127.0.0.1)4> erlang_lua:stop(foo).
+(rtr@127.0.0.1)6> erlang_lua:stop(foo).
 ok
 ```
 
