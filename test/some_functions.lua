@@ -123,6 +123,13 @@ function capitalize(s)
 	return s:sub(1, 1):upper() .. s:sub(2)
 end
 
+function table.foreach(t, fun)
+	for k, v in pairs(t) do
+		local result = fun(k, v)
+		if result then return result end
+	end
+end
+
 function element(s, t)
 	local function lookup(k, v)
 		return v == s and k or nil
