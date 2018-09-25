@@ -94,9 +94,11 @@ extern void erl_init(void *hp,long heap_size);
 #include "lualib.h"
 #include "lauxlib.h"
 
-#if LUA_VERSION_NUM==502
+#if LUA_VERSION_NUM==501
 #	define lua_objlen lua_rawlen
 #endif
+
+#define lua_objlen(L,i)         lua_rawlen(L, (i))
 
 
 /* WARNING: GLOBAL VARIABLE: EI_LUA_STATE */
@@ -257,7 +259,7 @@ main_message_loop()
 			case ERL_SEND:
 			case ERL_REG_SEND:
 				{
-					erlang_pid pid = { 0 };
+					erlang_pid pid = {{0}};
 					x_in->index = 0;
 					running = handle_msg(&pid);
 					if (running == -1) {
@@ -442,7 +444,7 @@ static const char *erl_functions_s = ""
 " "
 " function erl_tuple(t)"
 "	if type(t) == 'table' then"
-"		return { [_ERL_TUPLE] = true, unpack(t) }"
+"		return { [_ERL_TUPLE] = true, table.unpack(t) }"
 "	else"
 "		error[[bad argument #1 to 'erl_table' (table expected)]]"
 "	end"
