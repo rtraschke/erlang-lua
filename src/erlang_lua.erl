@@ -49,7 +49,8 @@ stop(Id) ->
     mbox, % The Lua Node gets messages sent to this Mbox.
     from, % The client where results need to be sent back to.
     infotext = [], % Stores up any info text coming from the Lua Node.
-    infoline = [] % Builds up complete lines of info text.
+    infoline = [], % Builds up complete lines of info text.
+    tracelevel = 0 % Trace level
 }).
 -define(MAX_INFOTEXT_LINES, 1000).
 
@@ -70,9 +71,14 @@ init([Id, Tracelevel]) ->
         {stop, Error} ->
             {stop, Error};
         {ok, Cmd} ->
-            ?LOG_INFO(init, [{lua_node, Clean_Id}, {start, Cmd}]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_INFO(init, [{lua_node, Clean_Id}, {start, Cmd}]);
+                true ->
+                    do_nothing
+            end,
             Port = open_port({spawn, Cmd}, [stream, {line, 100}, stderr_to_stdout, exit_status]),
-            wait_for_startup(#state{id = Id, port = Port, mbox = {lua, Lua_Node_Name}})
+            wait_for_startup(#state{id = Id, port = Port, mbox = {lua, Lua_Node_Name}, tracelevel = Tracelevel})
     end.
 
 mk_cmdline(Lua, Id, Host, Tracelevel) ->
@@ -88,35 +94,70 @@ mk_cmdline(Lua, Id, Host, Tracelevel) ->
 % Wait for the READY signal before confirming that our Lua Server is
 % up and running.  Just echo out some of the chit chat coming from the
 % Node program.
-wait_for_startup(#state{port = Port} = State) ->
+wait_for_startup(#state{port = Port, tracelevel = Tracelevel} = State) ->
     receive
         {Port, {exit_status, N}} ->
-            ?LOG_ERROR(wait_for_startup, [{startup_failure, {exit_status, N}}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_ERROR(wait_for_startup, [{startup_failure, {exit_status, N}}, State]);
+                true ->
+                    do_nothing
+            end,
             {stop, {exit_status, N}};
         {Port, {data, {eol, "READY"}}} ->
-            ?LOG_INFO(wait_for_startup, [ready, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_INFO(wait_for_startup, [ready, State]);
+                true ->
+                    do_nothing
+            end,
             {ok, State};
         {Port, {data, {eol, "."}}} ->
             wait_for_startup(State);
         {Port, {data, {eol, S}}} ->
-            ?LOG_DEBUG(wait_for_startup, [{startup, S}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_DEBUG(wait_for_startup, [{startup, S}, State]);
+                true ->
+                    do_nothing
+            end,
             wait_for_startup(State)
     end.
 
 
-handle_call({exec, Code}, From, #state{mbox = Mbox, from = undefined} = State) ->
-    ?LOG_DEBUG(handle_call, [{exec, Code}, State]),
+handle_call({exec, Code}, From, #state{mbox = Mbox, from = undefined, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(handle_call, [{exec, Code}, State]);
+        true ->
+            do_nothing
+    end,
     Mbox ! {exec, self(), Code, []},
     {noreply, State#state{from = From}};
-handle_call({call, Fun, Args}, From, #state{mbox = Mbox, from = undefined} = State) ->
-    ?LOG_DEBUG(handle_call, [{call, Fun, Args}, State]),
+handle_call({call, Fun, Args}, From, #state{mbox = Mbox, from = undefined, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(handle_call, [{call, Fun, Args}, State]);
+        true ->
+            do_nothing
+    end,
     Mbox ! {call, self(), Fun, Args},
     {noreply, State#state{from = From}};
-handle_call(stop, _From, #state{from = undefined} = State) ->
-    ?LOG_DEBUG(handle_call, [stop, State]),
+handle_call(stop, _From, #state{from = undefined, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(handle_call, [stop, State]);
+        true ->
+            do_nothing
+    end,
     {stop, normal, ok, State};
-handle_call(Request, _From, #state{from = Id} = State) when Id =/= undefined ->
-    ?LOG_DEBUG(handle_call, [{busy, Request}, State]),
+handle_call(Request, _From, #state{from = Id, tracelevel = Tracelevel} = State) when Id =/= undefined ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(handle_call, [{busy, Request}, State]);
+        true ->
+            do_nothing
+    end,
     {reply, {error, busy}, State}.
 
 handle_cast(_Request, State) ->
@@ -130,14 +171,29 @@ handle_cast(_Request, State) ->
 % The first three messages mean that the Lua program is no longer running.
 % So we stop.
 % The first is normal termination, the other two are abnormal.
-handle_info({Port, {exit_status, 0}}, #state{port = Port} = State) ->
-    ?LOG_INFO(handle_info, [{'EXIT', {exit_status, 0}}, State]),
+handle_info({Port, {exit_status, 0}}, #state{port = Port, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_INFO(handle_info, [{'EXIT', {exit_status, 0}}, State]);
+        true ->
+            do_nothing
+    end,
     {stop, normal, State#state{port = undefined, mbox = undefined}};
-handle_info({Port, {exit_status, N}}, #state{port = Port} = State) ->
-    ?LOG_ERROR(handle_info, [{'EXIT', {exit_status, N}}, State]),
+handle_info({Port, {exit_status, N}}, #state{port = Port, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_ERROR(handle_info, [{'EXIT', {exit_status, N}}, State]);
+        true ->
+            do_nothing
+    end,
     {stop, {port_status, N}, State#state{port = undefined, mbox = undefined}};
-handle_info({'EXIT', Port, Reason}, #state{port = Port} = State) ->
-    ?LOG_ERROR(handle_info, [{'EXIT', Reason}, State]),
+handle_info({'EXIT', Port, Reason}, #state{port = Port, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_ERROR(handle_info, [{'EXIT', Reason}, State]);
+        true ->
+            do_nothing
+    end,
     {stop, {port_exit, Reason}, State#state{port = undefined, mbox = undefined}};
 
 % Stdout data messages come from the standard output of the Lua Node program.
@@ -163,36 +219,66 @@ handle_info({lua, _Result} = Reply, #state{from = From} = State) when From =/= u
     {noreply, State#state{from = undefined}};
 
 % Anything else is weird and should, at least, be logged.
-handle_info(Info, State) ->
-    ?LOG_DEBUG(handle_info, [{info, Info}, State]),
+handle_info(Info, #state{tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(handle_info, [{info, Info}, State]);
+        true ->
+            do_nothing
+    end,
     {noreply, State}.
 
 
 % A termination request when the Lua Node is already down,
 % we simply acknowledge.
-terminate(Reason, #state{mbox = undefined} = State) ->
-    ?LOG_DEBUG(terminate, [{terminate, Reason}, State]),
+terminate(Reason, #state{mbox = undefined, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_DEBUG(terminate, [{terminate, Reason}, State]);
+        true ->
+            do_nothing
+    end,
     ok;
 % Any termination while the Lua Node is up and running,
 % we try and stop the Lua Node.
 % This could be an explicit call to stop() (Reason=normal),
 % or a supervisor shutting us down (Reason=shutdown),
 % or an out of band termination (Reason=?)
-terminate(Reason, #state{mbox = Mbox} = State) ->
-    ?LOG_INFO(terminate, [{terminate, Reason}, State]),
+terminate(Reason, #state{mbox = Mbox, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            ?LOG_INFO(terminate, [{terminate, Reason}, State]);
+        true ->
+            do_nothing
+    end,
     Mbox ! {stop, self(), [], []},
     wait_for_exit(State).
 
-wait_for_exit(#state{port = Port} = State) ->
+wait_for_exit(#state{port = Port, tracelevel = Tracelevel} = State) ->
     receive
         {Port, {exit_status, 0}} ->
-            ?LOG_INFO(wait_for_exit, [{'EXIT', {exit_status, 0}}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_INFO(wait_for_exit, [{'EXIT', {exit_status, 0}}, State]);
+                true ->
+                    do_nothing
+            end,
             ok;
         {Port, {exit_status, N}} ->
-            ?LOG_ERROR(wait_for_exit, [{'EXIT', {exit_status, N}}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_ERROR(wait_for_exit, [{'EXIT', {exit_status, N}}, State]);
+                true ->
+                    do_nothing
+            end,
             ok;
         {'EXIT', Port, Reason} ->
-            ?LOG_ERROR(wait_for_exit, [{'EXIT', Reason}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_ERROR(wait_for_exit, [{'EXIT', Reason}, State]);
+                true ->
+                    do_nothing
+            end,
             ok;
         {Port, {data, {eol, "."}}} ->
             wait_for_exit(flush_port_data(State));
@@ -201,7 +287,12 @@ wait_for_exit(#state{port = Port} = State) ->
         {Port, {data, {eol, S}}} ->
             wait_for_exit(eol_port_data(S, State));
         Other ->
-            ?LOG_DEBUG(wait_for_exit, [{info, Other}, State]),
+            if
+                Tracelevel > 0 ->
+                    ?LOG_DEBUG(wait_for_exit, [{info, Other}, State]);
+                true ->
+                    do_nothing
+            end,
             wait_for_exit(State)
     end.
 
@@ -240,20 +331,25 @@ flush_port_data(#state{infotext = [], infoline = []} = State) ->
     State;
 flush_port_data(#state{infoline = [_ | _]} = State) ->
     flush_port_data(eol_port_data("", State));
-flush_port_data(#state{infotext = Text} = State) ->
-    case lists:reverse(Text) of
-        ["FATAL: " ++ S | Rest] ->
-            ?LOG_FATAL(flush_port_data, [{stdout, [S | Rest]}, State]);
-        ["ERROR: " ++ S | Rest] ->
-            ?LOG_ERROR(flush_port_data, [{stdout, [S | Rest]}, State]);
-        ["WARN: " ++ S | Rest] ->
-            ?LOG_WARNING(flush_port_data, [{stdout, [S | Rest]}, State]);
-        ["INFO: " ++ S | Rest] ->
-            ?LOG_INFO(flush_port_data, [{stdout, [S | Rest]}, State]);
-        ["DEBUG: " ++ S | Rest] ->
-            ?LOG_DEBUG(flush_port_data, [{stdout, [S | Rest]}, State]);
-        Other ->
-            ?LOG_INFO(flush_port_data, [{stdout, Other}, State])
+flush_port_data(#state{infotext = Text, tracelevel = Tracelevel} = State) ->
+    if
+        Tracelevel > 0 ->
+            case lists:reverse(Text) of
+                ["FATAL: " ++ S | Rest] ->
+                    ?LOG_FATAL(flush_port_data, [{stdout, [S | Rest]}, State]);
+                ["ERROR: " ++ S | Rest] ->
+                    ?LOG_ERROR(flush_port_data, [{stdout, [S | Rest]}, State]);
+                ["WARN: " ++ S | Rest] ->
+                    ?LOG_WARNING(flush_port_data, [{stdout, [S | Rest]}, State]);
+                ["INFO: " ++ S | Rest] ->
+                    ?LOG_INFO(flush_port_data, [{stdout, [S | Rest]}, State]);
+                ["DEBUG: " ++ S | Rest] ->
+                    ?LOG_DEBUG(flush_port_data, [{stdout, [S | Rest]}, State]);
+                Other ->
+                    ?LOG_INFO(flush_port_data, [{stdout, Other}, State])
+            end;
+        true ->
+            do_nothing
     end,
     State#state{infotext = [], infoline = []}.
 
