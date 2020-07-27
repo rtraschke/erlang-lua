@@ -88,7 +88,7 @@ Erlang -> Lua
 
 #include "ei.h"
 extern int ei_tracelevel;
-extern void erl_init(void *hp,long heap_size);
+extern int ei_init();
 
 #include "lua.h"
 #include "lualib.h"
@@ -164,7 +164,7 @@ main(int argc, char *argv[])
 	setvbuf(stdout, NULL, _IONBF, 0);
 	setvbuf(stderr, NULL, _IONBF, 0);
 
-	erl_init(NULL, 0);
+	ei_init();
 
 	ei_x_new(&EI_LUA_STATE.x_in);
 	ei_x_new(&EI_LUA_STATE.x_out);
