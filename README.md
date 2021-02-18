@@ -13,35 +13,19 @@ that some assembly is required.
 ## Building
 
 The Erlang-Lua C C Node code currently compiles and tests successfully
-on Mac OS X (10.9, using XCode command line utilities) and Ubuntu
-(Trusty 14.04.1 LTS). It probably works on further Mac OS X versions
+on Mac OS X (10.13.6, using XCode command line utilities) and Ubuntu
+(Xenial 16.04.5 LTS). It probably works on further Mac OS X versions
 and Linux distros, but I've not tried it yet.
 
-A Lua installation (5.1 or 5.2) is required to be on the system.
+A Lua installation (5.1, 5.2 or 5.3) is required to be on the system.
 It's needed for the header files and to link the C Node. You can
 get Lua from http://www.lua.org/ . The current 5.1 source package
-can be downloaded from http://www.lua.org/ftp/lua-5.1.5.tar.gz ,
-and the 5.2 one from http://www.lua.org/ftp/lua-5.2.3.tar.gz . To
-build on Mac OS X, you run `make macosx test`, and on Ubuntu run
-`make linux test`. You'll need to install it somewhere, run `make
-INSTALL_TOP=Path_to_Lua_installation install`.
+can be downloaded from http://www.lua.org/ftp/lua-5.3.5.tar.gz ,
+the 5.2 one from http://www.lua.org/ftp/lua-5.2.3.tar.gz and the 5.2
+one from http://www.lua.org/ftp/lua-5.3.5.tar.gz. To build, you run
+`export LUA=/LuaInstallationPath`, and `make`.
 
-Building the Erlang-Lua C Node uses `rebar`
-(https://github.com/rebar/rebar), and a small `Makefile` is provided
-to wrap around the calls to `rebar`. You need to edit the `rebar.config`
-file and edit the setting of the Lua path to point to your Lua
-installation:
-
-```erlang
-{ port_env,[
-    {"LUA", "/Path_to_Lua_installation"},
-...
-]}.
-```
-
-After that, `make compile` compiles it all up (expect a warning
-about `missing braces around initializer`) and `make test` runs the
-Eunit test suite. The latter produces a whole bunch of logging to
+After that, the latter produces a whole bunch of logging to
 standard output and, if all is good, ends with `All 87 tests passed.`
 A `make clean` does the obvious.
 
